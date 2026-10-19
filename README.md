@@ -1,77 +1,36 @@
-# IBS Microbiome Analysis and Machine Learning
+# IBS microbiome analysis and machine learning
 
-This project re-analyses a public gut 16S rRNA dataset to examine microbial community patterns in IBS and healthy-control samples, then evaluates two genus-level classifiers using cross-validation.
+This project analyses public gut microbiome sequencing data for IBS and healthy-control samples. It combines 16S processing, taxonomy and diversity summaries with exploratory classification. The scripts and historical result snapshot are included so the workflow can be reviewed without downloading the dataset first.
 
-![IBS microbiome analysis overview](figures/03_overview.svg)
+## Dataset
 
-## Dataset and scope
+- NCBI BioProject: PRJNA637763
+- SRA study: SRP266324
+- Expected sample set in the metadata extraction: 111 samples (85 IBS, 26 healthy controls)
+- Amplicon region: V1–V2; Illumina MiSeq paired-end data
 
-- **NCBI BioProject:** PRJNA637763
-- **SRA study:** SRP266324
-- **Cohort described in the source study:** 85 IBS samples and 26 healthy controls
-- **Amplicon region:** V1–V2
-- **Platform:** Illumina MiSeq, paired-end
-- **Feature workflow:** QIIME 2, Deblur, SILVA 138 99% classifier
-- **Model evaluation:** L1-regularized logistic regression and random forest with five-fold stratified cross-validation
+See [DATA_PROVENANCE.md](docs/DATA_PROVENANCE.md) for the source and labeling rules.
 
-This is an independent re-analysis of public data, not a reproduction of the original paper's exact preprocessing or model. It is not clinical diagnostic validation.
+## Analysis
 
-## Analysis workflow
+QIIME 2 is used for read processing, Deblur denoising, SILVA taxonomy assignment and alpha-diversity summaries. The Python analysis aggregates reads at genus level and compares L1 logistic regression with random forest using stratified five-fold cross-validation.
 
-![IBS microbiome workflow](figures/01_workflow.svg)
+The preprocessing steps that select features and scale the model input are fitted within each training fold. Full-cohort feature rankings are exploratory and are not used as evidence of predictive performance.
 
-1. Retrieve public sample/run metadata and identify the IBS and healthy-control groups.
-2. Resolve SRA runs to ENA FASTQ files.
-3. Import forward reads into QIIME 2, trim the target primer, and denoise with Deblur.
-4. Assign taxonomy with the SILVA 138 99% classifier.
-5. Calculate alpha diversity and genus-level relative abundance.
-6. Evaluate classification using five-fold stratified cross-validation.
-7. Save metrics, feature rankings, plots, and a report.
+## Run locally
 
-The classifier's prevalence filter, centered-log-ratio transformation, and standardization are fitted within each training fold to reduce information leakage. The separate L1 genus ranking is fitted on the full cohort and is exploratory; it is not used to estimate cross-validation performance.
-
-## Results and interpretation
-
-The committed `results/` directory contains a historical snapshot. Its model metrics are **not** treated as the verified output of the corrected pipeline. Use the `results_actual/` artifact from the latest successful GitHub Actions run for current metrics.
-
-![Read-processing evidence from the committed snapshot](results/figures/03_read_processing_evidence.svg)
-
-![Output file map](figures/02_output_file_map.svg)
-
-Compact quality-control, taxonomy, diversity, and model-summary files are included where practical. Large intermediate feature tables, representative sequences, raw FASTQ files, and QIIME 2 artifacts are not committed. The workflow creates fresh analysis outputs and uploads them as the `project02-ibs-results` artifact for 90 days.
-
-## Run the analysis
-
-Requirements: Docker, Bash, curl, Python 3, and Git.
-
-From the repository root:
+The full workflow downloads many public FASTQ files and the QIIME 2 container image. It can require substantial network transfer, disk space and runtime.
 
 ```bash
 bash scripts/02_run_ibs_analysis.sh
 ```
 
-The workflow downloads public sequencing reads and runs QIIME 2 in Docker. It can take substantial time and bandwidth because the study includes 111 public SRA experiments.
+The workflow writes new results to `results_actual/`; the checked-in `results/` directory is a historical snapshot.
 
-## Repository layout
+## GitHub Actions
 
-```text
-.
-├── .github/workflows/ibs-microbiome.yml
-├── docs/
-├── figures/
-├── metadata/
-├── results/
-├── scripts/
-└── LICENSE
-```
+Pushes run quick checks on script syntax and confirm that the committed reference outputs and documentation are present. To run the full data-download and QIIME 2 analysis in GitHub Actions, open the Actions tab and manually run **IBS microbiome analysis**. Only a completed full analysis produces the `project02-ibs-results` artifact. A passing fast check is not a claim that the full analysis ran.
 
-## Limitations
+## Interpretation
 
-- The analysis covers one public cohort and depends on the sample labels available in its public metadata.
-- The workflow uses forward reads for denoising; it does not merge paired reads.
-- The model evaluation is internal cross-validation, not external validation on an independent cohort.
-- Genus-level feature ranking is exploratory and should not be interpreted as a causal or diagnostic result.
-- Results depend on the selected preprocessing, taxonomy database, and statistical choices.
-
-No private company data or synthetic biological measurements are used. Third-party datasets, software, and reference databases remain subject to their own terms.
-
+This is an observational microbiome analysis. Associations and cross-validation scores do not establish causality or clinical diagnostic performance. Sample labels are inherited from the source metadata and need to be interpreted within that dataset's design.
