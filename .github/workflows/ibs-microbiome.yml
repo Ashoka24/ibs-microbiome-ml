@@ -19,7 +19,27 @@ permissions:
   contents: read
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check shell and Python syntax
+        run: |
+          bash -n scripts/01_prepare_metadata.sh
+          bash -n scripts/02_run_ibs_analysis.sh
+          python -m py_compile scripts/03_build_results.py
+      - name: Check source snapshot and project documentation
+        run: |
+          test -s results/REPORT.md
+          test -s results/qc/table/feature-table.biom
+          test -s results/qc/taxonomy/taxonomy.tsv
+          test -s results/tables/alpha_diversity.tsv
+          test -s results/ml/cross_validation_metrics.tsv
+          test -s docs/DATA_PROVENANCE.md
+          test -s docs/WORKFLOW.md
+
   analyze:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
