@@ -1,0 +1,37 @@
+name: IBS microbiome analysis
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/**"
+      - "docs/**"
+      - "metadata/**"
+      - "README.md"
+      - ".github/workflows/ibs-microbiome.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ibs-microbiome-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pull QIIME 2
+        run: docker pull quay.io/qiime2/amplicon:2024.10
+      - name: Run public IBS analysis
+        run: bash scripts/02_run_ibs_analysis.sh
+      - name: Upload verified results
+        uses: actions/upload-artifact@v4
+        with:
+          name: project02-ibs-results
+          path: results_actual/
+          if-no-files-found: error
+          retention-days: 90
